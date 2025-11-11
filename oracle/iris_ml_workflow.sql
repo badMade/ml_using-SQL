@@ -206,7 +206,7 @@ SELECT id,
        petal_length,
        petal_width,
        species,
-       NTILE(5) OVER (ORDER BY id) AS fold_id
+       NTILE(5) OVER (ORDER BY DBMS_RANDOM.VALUE) AS fold_id
   FROM iris_raw;
 
 -- #############################################################
@@ -235,67 +235,67 @@ INSERT INTO iris_model_parameter_sets (algorithm, version_tag) VALUES ('SVM', 'v
 INSERT INTO iris_model_parameter_sets (algorithm, version_tag) VALUES ('SVM', 'v2');
 
 -- Decision Tree parameters (Oracle-specific setting names)
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_DECISION_TREE'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'TREE_TERM_MAX_DEPTH', '6'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'TREE_IMPURITY_METRIC', 'TREE_IMPURITY_GINI'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v1';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_DECISION_TREE' AS parameter_value FROM dual UNION ALL
+         SELECT 'TREE_TERM_MAX_DEPTH', '6' FROM dual UNION ALL
+         SELECT 'TREE_IMPURITY_METRIC', 'TREE_IMPURITY_GINI' FROM dual
+       ) v
+ WHERE p.algorithm = 'DECISION_TREE' AND p.version_tag = 'v1';
 
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_DECISION_TREE'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'TREE_TERM_MAX_DEPTH', '12'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'TREE_IMPURITY_METRIC', 'TREE_IMPURITY_ENTROPY'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v2';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_DECISION_TREE' AS parameter_value FROM dual UNION ALL
+         SELECT 'TREE_TERM_MAX_DEPTH', '12' FROM dual UNION ALL
+         SELECT 'TREE_IMPURITY_METRIC', 'TREE_IMPURITY_ENTROPY' FROM dual
+       ) v
+ WHERE p.algorithm = 'DECISION_TREE' AND p.version_tag = 'v2';
 
 -- Random Forest parameters (Oracle-specific setting names)
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_RANDOM_FOREST'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'RF_NUM_TREES', '20'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'RF_MAX_DEPTH', '8'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v1';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_RANDOM_FOREST' AS parameter_value FROM dual UNION ALL
+         SELECT 'RF_NUM_TREES', '20' FROM dual UNION ALL
+         SELECT 'RF_MAX_DEPTH', '8' FROM dual
+       ) v
+ WHERE p.algorithm = 'RANDOM_FOREST' AND p.version_tag = 'v1';
 
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_RANDOM_FOREST'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'RF_NUM_TREES', '40'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'RF_MAX_DEPTH', '12'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v2';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_RANDOM_FOREST' AS parameter_value FROM dual UNION ALL
+         SELECT 'RF_NUM_TREES', '40' FROM dual UNION ALL
+         SELECT 'RF_MAX_DEPTH', '12' FROM dual
+       ) v
+ WHERE p.algorithm = 'RANDOM_FOREST' AND p.version_tag = 'v2';
 
 -- Support Vector Machine parameters (Oracle-specific setting names)
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_SUPPORT_VECTOR_MACHINES'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'SVMS_COMPLEXITY_FACTOR', '0.5'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'SVMS_KERNEL_FUNCTION', 'SVMS_LINEAR'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v1';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_SUPPORT_VECTOR_MACHINES' AS parameter_value FROM dual UNION ALL
+         SELECT 'SVMS_COMPLEXITY_FACTOR', '0.5' FROM dual UNION ALL
+         SELECT 'SVMS_KERNEL_FUNCTION', 'SVMS_LINEAR' FROM dual
+       ) v
+ WHERE p.algorithm = 'SVM' AND p.version_tag = 'v1';
 
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_SUPPORT_VECTOR_MACHINES'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'SVMS_COMPLEXITY_FACTOR', '1.0'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'SVMS_KERNEL_FUNCTION', 'SVMS_GAUSSIAN'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v2';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_SUPPORT_VECTOR_MACHINES' AS parameter_value FROM dual UNION ALL
+         SELECT 'SVMS_COMPLEXITY_FACTOR', '1.0' FROM dual UNION ALL
+         SELECT 'SVMS_KERNEL_FUNCTION', 'SVMS_GAUSSIAN' FROM dual
+       ) v
+ WHERE p.algorithm = 'SVM' AND p.version_tag = 'v2';
 
 -- Lifecycle and metadata tables
 CREATE TABLE iris_model_lifecycle (
@@ -355,6 +355,11 @@ COMMIT;
 -- Section 5: Model training, evaluation, and lifecycle management
 --         (Oracle-specific use of DBMS_DATA_MINING package)
 -- #####################################################################
+-- NOTE: For multi-class classification, ROC AUC and Lift metrics are computed
+-- in a One-vs-Rest (OvR) manner for a single class ('Iris-virginica'). This
+-- provides a partial view of model performance. For complete evaluation, these
+-- metrics should ideally be computed for each class separately and averaged.
+-- In contrast, precision, recall, and F1 are macro-averaged across all classes.
 DECLARE
     c_positive_target    CONSTANT VARCHAR2(20) := 'Iris-virginica';
     v_accuracy           NUMBER;
@@ -373,8 +378,8 @@ DECLARE
     v_hyperparameters    VARCHAR2(4000);
 BEGIN
     FOR fold_rec IN (SELECT DISTINCT fold_id FROM iris_folds ORDER BY fold_id) LOOP
-        v_train_table := 'IRIS_TRAIN_F' || fold_rec.fold_id;
-        v_test_table  := 'IRIS_TEST_F' || fold_rec.fold_id;
+        v_train_table := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_TRAIN_F' || fold_rec.fold_id);
+        v_test_table  := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_TEST_F' || fold_rec.fold_id);
 
         BEGIN
             EXECUTE IMMEDIATE 'DROP TABLE ' || v_train_table;
@@ -414,7 +419,7 @@ BEGIN
               FROM iris_model_parameters
              WHERE parameter_set_id = param_rec.parameter_set_id;
 
-            v_model_name := 'IRIS_' || param_rec.algorithm || '_F' || fold_rec.fold_id || '_' || param_rec.version_tag;
+            v_model_name := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_' || param_rec.algorithm || '_F' || fold_rec.fold_id || '_' || param_rec.version_tag);
 
             BEGIN
                 DBMS_DATA_MINING.DROP_MODEL(v_model_name);
@@ -452,7 +457,7 @@ BEGIN
                 SYSTIMESTAMP + INTERVAL '30' DAY
             ) RETURNING model_id INTO v_model_id;
 
-            v_apply_table := 'IRIS_APPLY_' || v_model_id;
+            v_apply_table := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_APPLY_' || v_model_id);
             -- Oracle-specific: prediction probability columns follow the pattern
             -- PROBABILITY_<TARGET_VALUE> with hyphens converted to underscores.
             v_probability_column := 'PROBABILITY_' || REPLACE(UPPER(c_positive_target), '-', '_');
@@ -482,6 +487,8 @@ BEGIN
                 score_column_name        => 'PREDICTION'
             );
 
+            -- ROC AUC: Computed for 'Iris-virginica' vs. all other classes (One-vs-Rest).
+            -- For comprehensive multi-class evaluation, compute for each class and average.
             DBMS_DATA_MINING.COMPUTE_ROC(
                 roc_area                => v_roc_auc,
                 apply_result_table_name => v_apply_table,
@@ -492,7 +499,7 @@ BEGIN
                 score_column_name       => v_probability_column
             );
 
-            v_lift_table := 'IRIS_LIFT_' || v_model_id;
+            v_lift_table := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_LIFT_' || v_model_id);
             BEGIN
                 EXECUTE IMMEDIATE 'DROP TABLE ' || v_lift_table;
             EXCEPTION
@@ -502,6 +509,8 @@ BEGIN
                     END IF;
             END;
 
+            -- Lift: Computed for 'Iris-virginica' vs. all other classes (One-vs-Rest).
+            -- For comprehensive multi-class evaluation, compute for each class and average.
             DBMS_DATA_MINING.COMPUTE_LIFT(
                 apply_result_table_name  => v_apply_table,
                 target_table_name        => v_test_table,
