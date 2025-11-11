@@ -206,7 +206,7 @@ SELECT id,
        petal_length,
        petal_width,
        species,
-       NTILE(5) OVER (ORDER BY id) AS fold_id
+       NTILE(5) OVER (ORDER BY DBMS_RANDOM.VALUE) AS fold_id
   FROM iris_raw;
 
 -- #############################################################
