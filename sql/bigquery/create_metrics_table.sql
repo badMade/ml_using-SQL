@@ -10,5 +10,5 @@ CREATE TABLE IF NOT EXISTS `${project_id}.${dataset}.ml_metrics` (
     environment_label  STRING,
     tags               ARRAY<STRING>,
     metadata_json      JSON,
-    PRIMARY KEY (pipeline_id, run_id, metric_name) NOT ENFORCED
+    CONSTRAINT pk_ml_metrics PRIMARY KEY (pipeline_id, run_id, metric_name) NOT ENFORCED
 );
