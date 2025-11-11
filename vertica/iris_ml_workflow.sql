@@ -21,9 +21,10 @@ CREATE TABLE iris_raw (
     species      VARCHAR(32)
 );
 
--- Update the path to point to a shared IRIS CSV accessible to Vertica nodes.
+-- Load from a centralized S3 location for better portability across deployments.
+-- Replace with your S3 bucket path and configure S3 credentials as needed.
 COPY iris_raw
-    FROM '/data/iris/iris.csv'
+    FROM 's3://redshift-downloads/iris/iris.csv'
     PARSER FCSVPARSER()
     SKIP 1
     DELIMITER ',';
