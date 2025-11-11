@@ -115,7 +115,7 @@ After creating the table, populate metrics via inserts tailored to each platform
   ```
 - **BigQuery**
   ```sql
-  INSERT INTO `my-project.ml_observability.ml_metrics`
+  INSERT INTO `my-project.ml_observability.ml_metrics` (pipeline_id, run_id, metric_name, metric_value, metric_type, recorded_at, model_version, environment_label, tags, metadata_json)
   VALUES (
       'fraud-detection', '2024-05-01T00:00Z', 'precision', 0.913, 'scalar',
       CURRENT_TIMESTAMP(), 'v9', 'production', ['financial'], JSON '{"threshold": 0.75}'
