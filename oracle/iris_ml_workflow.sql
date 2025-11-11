@@ -376,6 +376,8 @@ DECLARE
     v_lift_table         VARCHAR2(30);
     v_probability_column VARCHAR2(128);
     v_hyperparameters    VARCHAR2(4000);
+    v_has_positive       NUMBER;
+    v_has_negative       NUMBER;
 BEGIN
     FOR fold_rec IN (SELECT DISTINCT fold_id FROM iris_folds ORDER BY fold_id) LOOP
         v_train_table := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_TRAIN_F' || fold_rec.fold_id);
@@ -487,40 +489,54 @@ BEGIN
                 score_column_name        => 'PREDICTION'
             );
 
-            -- ROC AUC: Computed for 'Iris-virginica' vs. all other classes (One-vs-Rest).
-            -- For comprehensive multi-class evaluation, compute for each class and average.
-            DBMS_DATA_MINING.COMPUTE_ROC(
-                roc_area                => v_roc_auc,
-                apply_result_table_name => v_apply_table,
-                target_table_name       => v_test_table,
-                target_value_column_name=> 'SPECIES',
-                case_id_column_name     => 'ID',
-                positive_target_value   => c_positive_target,
-                score_column_name       => v_probability_column
-            );
+            -- Guard: check if test set has both positive and negative examples for ROC/Lift
+            EXECUTE IMMEDIATE
+                'SELECT COUNT(DISTINCT CASE WHEN species = ''' || c_positive_target || ''' THEN 1 END),
+                        COUNT(DISTINCT CASE WHEN species <> ''' || c_positive_target || ''' THEN 1 END)
+                   FROM ' || v_test_table
+                INTO v_has_positive, v_has_negative;
 
-            v_lift_table := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_LIFT_' || v_model_id);
-            BEGIN
-                EXECUTE IMMEDIATE 'DROP TABLE ' || v_lift_table;
-            EXCEPTION
-                WHEN OTHERS THEN
-                    IF SQLCODE <> -942 THEN
-                        RAISE;
-                    END IF;
-            END;
+            -- Only compute ROC if test set has both positive and negative examples
+            IF v_has_positive > 0 AND v_has_negative > 0 THEN
+                DBMS_DATA_MINING.COMPUTE_ROC(
+                    roc_area                => v_roc_auc,
+                    apply_result_table_name => v_apply_table,
+                    target_table_name       => v_test_table,
+                    target_value_column_name=> 'SPECIES',
+                    case_id_column_name     => 'ID',
+                    positive_target_value   => c_positive_target,
+                    score_column_name       => v_probability_column
+                );
+            ELSE
+                v_roc_auc := NULL;  -- Set to NULL when ROC cannot be computed
+            END IF;
 
-            -- Lift: Computed for 'Iris-virginica' vs. all other classes (One-vs-Rest).
-            -- For comprehensive multi-class evaluation, compute for each class and average.
-            DBMS_DATA_MINING.COMPUTE_LIFT(
-                apply_result_table_name  => v_apply_table,
-                target_table_name        => v_test_table,
-                target_value_column_name => 'SPECIES',
-                case_id_column_name      => 'ID',
-                positive_target_value    => c_positive_target,
-                num_bins                 => 10,
-                score_column_name        => v_probability_column,
-                lift_table_name          => v_lift_table
-            );
+            v_lift_table := 'IRIS_LIFT_' || v_model_id;
+            
+            -- Only compute Lift if test set has both positive and negative examples
+            IF v_has_positive > 0 AND v_has_negative > 0 THEN
+                BEGIN
+                    EXECUTE IMMEDIATE 'DROP TABLE ' || v_lift_table;
+                EXCEPTION
+                    WHEN OTHERS THEN
+                        IF SQLCODE <> -942 THEN
+                            RAISE;
+                        END IF;
+                END;
+
+                DBMS_DATA_MINING.COMPUTE_LIFT(
+                    apply_result_table_name  => v_apply_table,
+                    target_table_name        => v_test_table,
+                    target_value_column_name => 'SPECIES',
+                    case_id_column_name      => 'ID',
+                    positive_target_value    => c_positive_target,
+                    num_bins                 => 10,
+                    score_column_name        => v_probability_column,
+                    lift_table_name          => v_lift_table
+                );
+            ELSE
+                v_lift := NULL;  -- Set to NULL when Lift cannot be computed
+            END IF;
 
             SELECT LISTAGG(parameter_name || '=' || parameter_value, '; ')
                      WITHIN GROUP (ORDER BY parameter_name)
@@ -563,13 +579,16 @@ BEGIN
               INTO v_precision, v_recall, v_f1
               FROM aggregates;
 
-            EXECUTE IMMEDIATE
-                'SELECT lift_value FROM (
-                     SELECT bucket_number, lift_value
-                       FROM ' || v_lift_table || '
-                      ORDER BY bucket_number
-                 ) WHERE ROWNUM = 1'
-                INTO v_lift;
+            -- Only extract lift value if it was computed
+            IF v_has_positive > 0 AND v_has_negative > 0 THEN
+                EXECUTE IMMEDIATE
+                    'SELECT lift_value FROM (
+                         SELECT bucket_number, lift_value
+                           FROM ' || v_lift_table || '
+                          ORDER BY bucket_number
+                     ) WHERE ROWNUM = 1'
+                    INTO v_lift;
+            END IF;
 
             INSERT INTO iris_metrics (
                 model_id,
