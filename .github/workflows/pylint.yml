@@ -20,4 +20,9 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py')
+        PYTHON_FILES=$(git ls-files '*.py')
+        if [ -z "$PYTHON_FILES" ]; then
+          echo "No Python files found to lint. Skipping pylint."
+          exit 0
+        fi
+        pylint $PYTHON_FILES
