@@ -528,16 +528,21 @@ BEGIN
             per_class AS (
                 SELECT base.actual AS class_label,
                        SUM(CASE WHEN base.actual = base.predicted THEN base.cnt ELSE 0 END) AS tp,
-                       SUM(CASE WHEN base.actual <> base.predicted THEN base.cnt ELSE 0 END) AS fn,
-                       (SELECT NVL(SUM(cnt), 0) FROM cm c2 WHERE c2.predicted = base.actual) AS predicted_total,
-                       (SELECT NVL(SUM(cnt), 0) FROM cm c3 WHERE c3.actual    = base.actual) AS actual_total
+                       SUM(base.cnt) AS actual_total
                   FROM cm base
                  GROUP BY base.actual
             ),
+            per_predicted AS (
+                SELECT pred.predicted AS class_label,
+                       SUM(pred.cnt) AS predicted_total
+                  FROM cm pred
+                 GROUP BY pred.predicted
+            ),
             aggregates AS (
-                SELECT AVG(CASE WHEN predicted_total > 0 THEN tp / predicted_total ELSE 0 END) AS precision_macro,
-                       AVG(CASE WHEN actual_total    > 0 THEN tp / actual_total    ELSE 0 END) AS recall_macro
-                  FROM per_class
+                SELECT AVG(CASE WHEN pp.predicted_total > 0 THEN pc.tp / pp.predicted_total ELSE 0 END) AS precision_macro,
+                       AVG(CASE WHEN pc.actual_total > 0 THEN pc.tp / pc.actual_total ELSE 0 END) AS recall_macro
+                  FROM per_class pc
+                  LEFT JOIN per_predicted pp ON pc.class_label = pp.class_label
             )
             SELECT precision_macro,
                    recall_macro,
