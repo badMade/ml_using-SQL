@@ -176,22 +176,15 @@ BEGIN
                   p.petal_width,
                   p.predicted_label,
                   p.predicted_label_prob,
-                  actual.species,
+                  p.species,
                   CURRENT_TIMESTAMP
               FROM ML.PREDICT(MODEL analytics.%I,
-                   (SELECT sepal_length, sepal_width, petal_length, petal_width FROM analytics.iris_folds WHERE fold_id = %L)
-              ) AS p
-              JOIN analytics.iris_folds AS actual
-                ON p.sepal_length = actual.sepal_length
-               AND p.sepal_width  = actual.sepal_width
-               AND p.petal_length = actual.petal_length
-               AND p.petal_width  = actual.petal_width
-              WHERE actual.fold_id = %L;$$,
+                   (SELECT sepal_length, sepal_width, petal_length, petal_width, species FROM analytics.iris_folds WHERE fold_id = %L)
+              ) AS p;$$,
             run_id,
             model_identifier,
             fold,
             model_identifier,
-            fold,
             fold
         );
 
