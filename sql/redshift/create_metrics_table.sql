@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS ml_metrics (
     metric_name        VARCHAR(255)    ENCODE zstd NOT NULL,
     metric_value       DOUBLE PRECISION,
     metric_type        VARCHAR(64)     ENCODE zstd DEFAULT 'scalar',
-    recorded_at        TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    recorded_at        TIMESTAMPTZ     DEFAULT CURRENT_TIMESTAMP,
     model_version      VARCHAR(128)    ENCODE zstd,
     environment_label  VARCHAR(64)     ENCODE zstd,
     tags               SUPER,
