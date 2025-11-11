@@ -62,7 +62,10 @@ CREATE TABLE IF NOT EXISTS `iris_ml.iris_predictions` (
 DECLARE k INT64 DEFAULT 5;
 DECLARE fold INT64 DEFAULT 1;
 DECLARE run_id STRING DEFAULT FORMAT_TIMESTAMP('%Y%m%d%H%M%S', CURRENT_TIMESTAMP());
-DECLARE hyperparameters STRING DEFAULT '{"model_type":"logistic_reg","max_iterations":50,"l2_reg":0.1}';
+DECLARE model_type STRING DEFAULT 'logistic_reg';
+DECLARE max_iterations INT64 DEFAULT 50;
+DECLARE l2_reg FLOAT64 DEFAULT 0.1;
+DECLARE hyperparameters STRING DEFAULT FORMAT('{"model_type":"%s","max_iterations":%d,"l2_reg":%f}', model_type, max_iterations, l2_reg);
 DECLARE model_name STRING;
 DECLARE eval_sql STRING;
 DECLARE predict_sql STRING;
@@ -75,12 +78,15 @@ WHILE fold <= k DO
 
   EXECUTE IMMEDIATE FORMAT(
     '''CREATE OR REPLACE MODEL `iris_ml.%s`
-        OPTIONS (model_type = ''logistic_reg'', input_label_cols = [''species''], max_iterations = 50, l2_reg = 0.1)
+        OPTIONS (model_type = ''%s'', input_label_cols = [''species''], max_iterations = %d, l2_reg = %f)
       AS
       SELECT sepal_length, sepal_width, petal_length, petal_width, species
       FROM `iris_ml.iris_folds`
       WHERE fold_id <> %d''',
     model_name,
+    model_type,
+    max_iterations,
+    l2_reg,
     fold
   );
 
