@@ -206,7 +206,10 @@ SELECT id,
        petal_length,
        petal_width,
        species,
-       NTILE(5) OVER (ORDER BY DBMS_RANDOM.VALUE) AS fold_id
+       NTILE(5) OVER (
+           PARTITION BY species
+           ORDER BY DBMS_RANDOM.VALUE
+       ) AS fold_id
   FROM iris_raw;
 
 -- #############################################################
@@ -491,8 +494,8 @@ BEGIN
 
             -- Guard: check if test set has both positive and negative examples for ROC/Lift
             EXECUTE IMMEDIATE
-                'SELECT COUNT(DISTINCT CASE WHEN species = ''' || c_positive_target || ''' THEN 1 END),
-                        COUNT(DISTINCT CASE WHEN species <> ''' || c_positive_target || ''' THEN 1 END)
+                'SELECT NVL(MAX(CASE WHEN species = ''' || c_positive_target || ''' THEN 1 ELSE 0 END), 0),
+                        NVL(MAX(CASE WHEN species <> ''' || c_positive_target || ''' THEN 1 ELSE 0 END), 0)
                    FROM ' || v_test_table
                 INTO v_has_positive, v_has_negative;
 
