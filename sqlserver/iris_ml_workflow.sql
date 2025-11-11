@@ -30,15 +30,32 @@ CREATE TABLE analytics.iris_raw (
 );
 GO
 
--- Load the IRIS CSV from a shared location. Update the data source as needed.
-BULK INSERT analytics.iris_raw
-FROM 'C:\\data\\iris.csv' -- Update path to match the shared location accessible to SQL Server
-WITH (
+-- Load the IRIS CSV from a configured data source.
+-- For production deployments, use one of the following approaches:
+--   * Azure Blob Storage: Configure an EXTERNAL DATA SOURCE and use BULK INSERT
+--     or OPENROWSET with a URL like:
+--     'https://<account>.blob.core.windows.net/<container>/iris.csv'
+--   * Network share accessible to the SQL Server service account:
+--     '\\\\server\\share\\iris.csv'
+--   * HTTP/HTTPS endpoint with appropriate authentication
+--
+-- The example below uses a public HTTPS endpoint. Replace with your actual data
+-- source. See: https://docs.microsoft.com/sql/t-sql/statements/bulk-insert-transact-sql
+
+-- Using OPENROWSET for flexibility with HTTPS sources
+INSERT INTO analytics.iris_raw (sepal_length, sepal_width, petal_length, petal_width, species)
+SELECT 
+    CAST([sepal_length] AS FLOAT),
+    CAST([sepal_width] AS FLOAT),
+    CAST([petal_length] AS FLOAT),
+    CAST([petal_width] AS FLOAT),
+    CAST([species] AS NVARCHAR(32))
+FROM OPENROWSET(
+    BULK N'https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv',
     FORMAT = 'CSV',
     FIRSTROW = 2,
-    FIELDTERMINATOR = ',',
-    ROWTERMINATOR = '0x0a'
-);
+    FORMATFILE_DATA_SOURCE = NULL
+) AS iris_data([sepal_length], [sepal_width], [petal_length], [petal_width], [species]);
 GO
 
 IF OBJECT_ID(N'analytics.iris_folds', N'U') IS NOT NULL
