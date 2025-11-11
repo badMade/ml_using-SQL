@@ -86,11 +86,19 @@ DECLARE
     fold INTEGER := 1;
     run_id VARCHAR(64);
     model_identifier VARCHAR(128);
-    hyper_json VARCHAR(4000) := '{"function":"random_forest","max_depth":5,"num_trees":200,"sample_ratio":1.0}';
+    -- Hyperparameter variables to avoid duplication
+    max_depth_val INTEGER := 5;
+    num_trees_val INTEGER := 200;
+    sample_ratio_val REAL := 1.0;
+    hyper_json VARCHAR(4000);
 BEGIN
     IF k < 2 THEN
         RAISE EXCEPTION 'k-fold value % must be >= 2', k;
     END IF;
+
+    -- Build hyper_json from variables
+    hyper_json := format('{"function":"random_forest","max_depth":%s,"num_trees":%s,"sample_ratio":%s}',
+                         max_depth_val, num_trees_val, sample_ratio_val);
 
     run_id := REPLACE(to_char(GETDATE(), 'YYYYMMDDHH24MISS'), ' ', '') || LPAD((RANDOM()*1000)::INT::TEXT, 3, '0');
 
@@ -110,12 +118,15 @@ BEGIN
               TARGET species
               FUNCTION random_forest
               SETTINGS (
-                max_depth = 5,
-                num_trees = 200,
-                sample_ratio = 1.0
+                max_depth = %s,
+                num_trees = %s,
+                sample_ratio = %s
               );$$,
             model_identifier,
-            fold
+            fold,
+            max_depth_val,
+            num_trees_val,
+            sample_ratio_val
         );
 
         -- Snapshot evaluation metrics once per fold.
