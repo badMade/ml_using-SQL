@@ -23,10 +23,12 @@ CREATE TABLE iris_raw (
 );
 
 -- The Oracle workflow loads IRIS data from a staging area. Redshift mirrors that
--- behaviour by using the public AWS sample. Adjust IAM_ROLE as appropriate.
+-- behaviour by using the public AWS sample. Replace the placeholder IAM role ARN below
+-- with a dedicated role that follows the principle of least privilege (read access to
+-- the specific S3 bucket and path only).
 COPY iris_raw
 FROM 's3://redshift-downloads/iris/iris.csv'
-IAM_ROLE default
+IAM_ROLE 'arn:aws:iam::<aws-account-id>:role/<role-name-for-redshift-copy>'
 FORMAT AS CSV
 IGNOREHEADER 1;
 
