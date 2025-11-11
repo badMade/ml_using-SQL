@@ -600,10 +600,10 @@ BEGIN
                 SYSTIMESTAMP,
                 'Auto-generated from training job'
             );
-
-            COMMIT;
         END LOOP;
     END LOOP;
+    
+    COMMIT;
 END;
 /
 
