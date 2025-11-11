@@ -373,8 +373,8 @@ DECLARE
     v_hyperparameters    VARCHAR2(4000);
 BEGIN
     FOR fold_rec IN (SELECT DISTINCT fold_id FROM iris_folds ORDER BY fold_id) LOOP
-        v_train_table := 'IRIS_TRAIN_F' || fold_rec.fold_id;
-        v_test_table  := 'IRIS_TEST_F' || fold_rec.fold_id;
+        v_train_table := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_TRAIN_F' || fold_rec.fold_id);
+        v_test_table  := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_TEST_F' || fold_rec.fold_id);
 
         BEGIN
             EXECUTE IMMEDIATE 'DROP TABLE ' || v_train_table;
@@ -414,7 +414,7 @@ BEGIN
               FROM iris_model_parameters
              WHERE parameter_set_id = param_rec.parameter_set_id;
 
-            v_model_name := 'IRIS_' || param_rec.algorithm || '_F' || fold_rec.fold_id || '_' || param_rec.version_tag;
+            v_model_name := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_' || param_rec.algorithm || '_F' || fold_rec.fold_id || '_' || param_rec.version_tag);
 
             BEGIN
                 DBMS_DATA_MINING.DROP_MODEL(v_model_name);
@@ -452,7 +452,7 @@ BEGIN
                 SYSTIMESTAMP + INTERVAL '30' DAY
             ) RETURNING model_id INTO v_model_id;
 
-            v_apply_table := 'IRIS_APPLY_' || v_model_id;
+            v_apply_table := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_APPLY_' || v_model_id);
             -- Oracle-specific: prediction probability columns follow the pattern
             -- PROBABILITY_<TARGET_VALUE> with hyphens converted to underscores.
             v_probability_column := 'PROBABILITY_' || REPLACE(UPPER(c_positive_target), '-', '_');
@@ -492,7 +492,7 @@ BEGIN
                 score_column_name       => v_probability_column
             );
 
-            v_lift_table := 'IRIS_LIFT_' || v_model_id;
+            v_lift_table := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_LIFT_' || v_model_id);
             BEGIN
                 EXECUTE IMMEDIATE 'DROP TABLE ' || v_lift_table;
             EXCEPTION
