@@ -355,6 +355,11 @@ COMMIT;
 -- Section 5: Model training, evaluation, and lifecycle management
 --         (Oracle-specific use of DBMS_DATA_MINING package)
 -- #####################################################################
+-- NOTE: For multi-class classification, ROC AUC and Lift metrics are computed
+-- in a One-vs-Rest (OvR) manner for a single class ('Iris-virginica'). This
+-- provides a partial view of model performance. For complete evaluation, these
+-- metrics should ideally be computed for each class separately and averaged.
+-- In contrast, precision, recall, and F1 are macro-averaged across all classes.
 DECLARE
     c_positive_target    CONSTANT VARCHAR2(20) := 'Iris-virginica';
     v_accuracy           NUMBER;
@@ -482,6 +487,8 @@ BEGIN
                 score_column_name        => 'PREDICTION'
             );
 
+            -- ROC AUC: Computed for 'Iris-virginica' vs. all other classes (One-vs-Rest).
+            -- For comprehensive multi-class evaluation, compute for each class and average.
             DBMS_DATA_MINING.COMPUTE_ROC(
                 roc_area                => v_roc_auc,
                 apply_result_table_name => v_apply_table,
@@ -502,6 +509,8 @@ BEGIN
                     END IF;
             END;
 
+            -- Lift: Computed for 'Iris-virginica' vs. all other classes (One-vs-Rest).
+            -- For comprehensive multi-class evaluation, compute for each class and average.
             DBMS_DATA_MINING.COMPUTE_LIFT(
                 apply_result_table_name  => v_apply_table,
                 target_table_name        => v_test_table,
