@@ -235,67 +235,67 @@ INSERT INTO iris_model_parameter_sets (algorithm, version_tag) VALUES ('SVM', 'v
 INSERT INTO iris_model_parameter_sets (algorithm, version_tag) VALUES ('SVM', 'v2');
 
 -- Decision Tree parameters (Oracle-specific setting names)
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_DECISION_TREE'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'TREE_TERM_MAX_DEPTH', '6'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'TREE_IMPURITY_METRIC', 'TREE_IMPURITY_GINI'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v1';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_DECISION_TREE' AS parameter_value FROM dual UNION ALL
+         SELECT 'TREE_TERM_MAX_DEPTH', '6' FROM dual UNION ALL
+         SELECT 'TREE_IMPURITY_METRIC', 'TREE_IMPURITY_GINI' FROM dual
+       ) v
+ WHERE p.algorithm = 'DECISION_TREE' AND p.version_tag = 'v1';
 
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_DECISION_TREE'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'TREE_TERM_MAX_DEPTH', '12'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'TREE_IMPURITY_METRIC', 'TREE_IMPURITY_ENTROPY'
-  FROM iris_model_parameter_sets WHERE algorithm = 'DECISION_TREE' AND version_tag = 'v2';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_DECISION_TREE' AS parameter_value FROM dual UNION ALL
+         SELECT 'TREE_TERM_MAX_DEPTH', '12' FROM dual UNION ALL
+         SELECT 'TREE_IMPURITY_METRIC', 'TREE_IMPURITY_ENTROPY' FROM dual
+       ) v
+ WHERE p.algorithm = 'DECISION_TREE' AND p.version_tag = 'v2';
 
 -- Random Forest parameters (Oracle-specific setting names)
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_RANDOM_FOREST'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'RF_NUM_TREES', '20'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'RF_MAX_DEPTH', '8'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v1';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_RANDOM_FOREST' AS parameter_value FROM dual UNION ALL
+         SELECT 'RF_NUM_TREES', '20' FROM dual UNION ALL
+         SELECT 'RF_MAX_DEPTH', '8' FROM dual
+       ) v
+ WHERE p.algorithm = 'RANDOM_FOREST' AND p.version_tag = 'v1';
 
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_RANDOM_FOREST'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'RF_NUM_TREES', '40'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'RF_MAX_DEPTH', '12'
-  FROM iris_model_parameter_sets WHERE algorithm = 'RANDOM_FOREST' AND version_tag = 'v2';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_RANDOM_FOREST' AS parameter_value FROM dual UNION ALL
+         SELECT 'RF_NUM_TREES', '40' FROM dual UNION ALL
+         SELECT 'RF_MAX_DEPTH', '12' FROM dual
+       ) v
+ WHERE p.algorithm = 'RANDOM_FOREST' AND p.version_tag = 'v2';
 
 -- Support Vector Machine parameters (Oracle-specific setting names)
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_SUPPORT_VECTOR_MACHINES'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'SVMS_COMPLEXITY_FACTOR', '0.5'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v1';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'SVMS_KERNEL_FUNCTION', 'SVMS_LINEAR'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v1';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_SUPPORT_VECTOR_MACHINES' AS parameter_value FROM dual UNION ALL
+         SELECT 'SVMS_COMPLEXITY_FACTOR', '0.5' FROM dual UNION ALL
+         SELECT 'SVMS_KERNEL_FUNCTION', 'SVMS_LINEAR' FROM dual
+       ) v
+ WHERE p.algorithm = 'SVM' AND p.version_tag = 'v1';
 
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'ALGO_NAME', 'ALGO_SUPPORT_VECTOR_MACHINES'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'SVMS_COMPLEXITY_FACTOR', '1.0'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v2';
-INSERT INTO iris_model_parameters
-SELECT parameter_set_id, 'SVMS_KERNEL_FUNCTION', 'SVMS_GAUSSIAN'
-  FROM iris_model_parameter_sets WHERE algorithm = 'SVM' AND version_tag = 'v2';
+INSERT INTO iris_model_parameters (parameter_set_id, parameter_name, parameter_value)
+SELECT p.parameter_set_id, v.parameter_name, v.parameter_value
+  FROM iris_model_parameter_sets p
+ CROSS JOIN
+       ( SELECT 'ALGO_NAME' AS parameter_name, 'ALGO_SUPPORT_VECTOR_MACHINES' AS parameter_value FROM dual UNION ALL
+         SELECT 'SVMS_COMPLEXITY_FACTOR', '1.0' FROM dual UNION ALL
+         SELECT 'SVMS_KERNEL_FUNCTION', 'SVMS_GAUSSIAN' FROM dual
+       ) v
+ WHERE p.algorithm = 'SVM' AND p.version_tag = 'v2';
 
 -- Lifecycle and metadata tables
 CREATE TABLE iris_model_lifecycle (
