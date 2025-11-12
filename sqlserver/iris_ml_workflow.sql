@@ -176,27 +176,17 @@ BEGIN
             @language = N'Python',
             @script = N'
 import pandas as pd
-import json
-from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from skl2onnx import convert_sklearn
-from skl2onnx.common.data_types import FloatTensorType
+from skl2onnx.common.data_types import FloatTensorType, StringTensorType
 
 # Parse hyperparameters from JSON
 hyperparams = json.loads(hyperparameters_json)
 
 X = InputDataSet[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
-y = InputDataSet["species"].copy()
-encoder = LabelEncoder()
-y_encoded = encoder.fit_transform(y)
-
-# Use hyperparameters from JSON
-model = LogisticRegression(
-    max_iter=hyperparams.get("max_iter", 100),
-    solver=hyperparams.get("solver", "lbfgs"),
-    multi_class="auto"
-)
-model.fit(X, y_encoded)
+y = InputDataSet["species"]
+model = LogisticRegression(max_iter=200, solver="lbfgs", multi_class="auto")
+model.fit(X, y)
 initial_type = [("float_input", FloatTensorType([None, 4]))]
 onnx_model = convert_sklearn(model, initial_types=initial_type, target_opset=12)
 OutputDataSet = pd.DataFrame({"model_onnx": [onnx_model.SerializeToString()]})
