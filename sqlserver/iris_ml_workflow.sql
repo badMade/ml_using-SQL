@@ -1,31 +1,31 @@
-/*
-SQL Server implementation mirroring the Oracle iris_ml_workflow pipeline.
-The workflow uses SQL Server Machine Learning Services (Python) to train an
-ONNX classification model, persists the artefact for scoring with the native
-PREDICT function, evaluates metrics in T-SQL, and stores results following the
-Oracle metrics schema.
-
-Non-ANSI notes:
-  * BULK INSERT, sp_execute_external_script, and PREDICT are SQL Server
-    extensions.
-  * The script assumes Machine Learning Services (Python) and the skl2onnx
-    package are installed in the SQL Server environment.
-*/
+-- language: tsql
+-- SQL Server implementation mirroring the Oracle iris_ml_workflow pipeline.
+-- The workflow uses SQL Server Machine Learning Services (Python) to train an
+-- ONNX classification model, persists the artefact for scoring with the native
+-- PREDICT function, evaluates metrics in T-SQL, and stores results following the
+-- Oracle metrics schema.
+--
+-- Non-ANSI notes:
+--   * BULK INSERT, sp_execute_external_script, and PREDICT are SQL Server
+--     extensions.
+--   * The script assumes Machine Learning Services (Python) and the skl2onnx
+--     package are installed in the SQL Server environment.
 
 -- 1. Schema and source table setup ---------------------------------------------------
-DECLARE
-    v_count NUMBER;
+-- Note: SQL Server requires database-level users to be created via separate scripts
+-- with proper authentication (SQL or Windows). This script assumes the 'analytics'
+-- schema already exists or will be created by a DBA.
+
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = N'analytics')
 BEGIN
-    SELECT COUNT(*) INTO v_count FROM all_users WHERE username = 'ANALYTICS';
-    IF v_count = 0 THEN
-        EXECUTE IMMEDIATE 'CREATE USER analytics IDENTIFIED BY analytics_password';
-        EXECUTE IMMEDIATE 'GRANT CREATE SESSION TO analytics';
-    END IF;
+    EXEC('CREATE SCHEMA analytics');
 END;
-/
+GO
 
 IF OBJECT_ID(N'analytics.iris_raw', N'U') IS NOT NULL
+BEGIN
     DROP TABLE analytics.iris_raw;
+END;
 GO
 
 CREATE TABLE analytics.iris_raw (
@@ -62,11 +62,13 @@ FROM OPENROWSET(
     FORMAT = 'CSV',
     FIRSTROW = 2,
     FORMATFILE_DATA_SOURCE = NULL
-) AS iris_data([sepal_length], [sepal_width], [petal_length], [petal_width], [species]);
 GO
 
 IF OBJECT_ID(N'analytics.iris_folds', N'U') IS NOT NULL
+BEGIN
     DROP TABLE analytics.iris_folds;
+END;
+GO
 GO
 
 SELECT *, NTILE(5) OVER (ORDER BY NEWID()) AS fold_id
@@ -133,9 +135,11 @@ BEGIN
         created_at      DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME()
     );
 END;
+IF OBJECT_ID(N'analytics.run_iris_kfold', N'P') IS NOT NULL
+BEGIN
+    DROP PROCEDURE analytics.run_iris_kfold;
+END;
 GO
-
--- 3. K-fold stored procedure --------------------------------------------------------
 IF OBJECT_ID(N'analytics.run_iris_kfold', N'P') IS NOT NULL
     DROP PROCEDURE analytics.run_iris_kfold;
 GO

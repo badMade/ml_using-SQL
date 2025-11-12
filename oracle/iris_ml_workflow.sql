@@ -417,7 +417,7 @@ BEGIN
               FROM iris_model_parameter_sets ps
              ORDER BY ps.algorithm, ps.version_tag
         ) LOOP
-            TRUNCATE TABLE iris_dm_settings;
+            EXECUTE IMMEDIATE 'TRUNCATE TABLE iris_dm_settings';
 
             INSERT INTO iris_dm_settings (setting_name, setting_value)
             SELECT parameter_name, parameter_value
