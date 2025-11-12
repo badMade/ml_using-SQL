@@ -8,8 +8,8 @@ CREATE TABLE ml_metrics (
     recorded_at        TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP,
     model_version      VARCHAR2(128),
     environment_label  VARCHAR2(64),
-    tags               CLOB,
-    metadata_json      CLOB,
+    tags               JSON,
+    metadata_json      JSON,
     CONSTRAINT pk_ml_metrics PRIMARY KEY (pipeline_id, run_id, metric_name)
 );
 
