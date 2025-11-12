@@ -60,15 +60,20 @@ SELECT
 FROM OPENROWSET(
     BULK N'https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv',
     FORMAT = 'CSV',
-    FIRSTROW = 2,
-    FORMATFILE_DATA_SOURCE = NULL
+    FIRSTROW = 2
+) WITH (
+    sepal_length FLOAT,
+    sepal_width FLOAT,
+    petal_length FLOAT,
+    petal_width FLOAT,
+    species NVARCHAR(32)
+) AS source_data;
 GO
 
 IF OBJECT_ID(N'analytics.iris_folds', N'U') IS NOT NULL
 BEGIN
     DROP TABLE analytics.iris_folds;
 END;
-GO
 GO
 
 SELECT *, NTILE(5) OVER (ORDER BY NEWID()) AS fold_id
@@ -135,13 +140,12 @@ BEGIN
         created_at      DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME()
     );
 END;
+GO
+
 IF OBJECT_ID(N'analytics.run_iris_kfold', N'P') IS NOT NULL
 BEGIN
     DROP PROCEDURE analytics.run_iris_kfold;
 END;
-GO
-IF OBJECT_ID(N'analytics.run_iris_kfold', N'P') IS NOT NULL
-    DROP PROCEDURE analytics.run_iris_kfold;
 GO
 
 CREATE PROCEDURE analytics.run_iris_kfold
@@ -186,17 +190,21 @@ BEGIN
         EXEC sp_execute_external_script
             @language = N'Python',
             @script = N'
-import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from skl2onnx import convert_sklearn
-from skl2onnx.common.data_types import FloatTensorType, StringTensorType
+  import json
+  import pandas as pd
+  from sklearn.linear_model import LogisticRegression
+  from skl2onnx import convert_sklearn
+  from skl2onnx.common.data_types import FloatTensorType, StringTensorType
 
-# Parse hyperparameters from JSON
-hyperparams = json.loads(hyperparameters_json)
+  # Parse hyperparameters from JSON
+  hyperparams = json.loads(hyperparameters_json)
+  solver = hyperparams.get("solver", "lbfgs")
+  max_iter = int(hyperparams.get("max_iter", 200))
+  multi_class = hyperparams.get("multi_class", "auto")
 
-X = InputDataSet[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
-y = InputDataSet["species"]
-model = LogisticRegression(max_iter=200, solver="lbfgs", multi_class="auto")
+  X = InputDataSet[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
+  y = InputDataSet["species"]
+  model = LogisticRegression(max_iter=max_iter, solver=solver, multi_class=multi_class)
 model.fit(X, y)
 initial_type = [("float_input", FloatTensorType([None, 4]))]
 onnx_model = convert_sklearn(model, initial_types=initial_type, target_opset=12)
@@ -208,10 +216,21 @@ OutputDataSet = pd.DataFrame({"model_onnx": [onnx_model.SerializeToString()]})
             @hyperparameters_json = @hyperparameters;
 
         MERGE analytics.iris_models AS target
-        USING (SELECT @run_id AS run_id, @fold AS fold_number, @model_name AS model_name, model_onnx, @hyperparameters AS hyperparameters FROM @model) AS source
+        USING (
+            SELECT
+                @run_id AS run_id,
+                @fold AS fold_number,
+                @model_name AS model_name,
+                model_onnx,
+                @hyperparameters AS hyperparameters
+            FROM @model
+        ) AS source
         ON target.run_id = source.run_id AND target.fold_number = source.fold_number
         WHEN MATCHED THEN
-            UPDATE SET model_name = source.model_name, model_onnx = source.model_onnx, hyperparameters = source.hyperparameters, created_at = SYSUTCDATETIME()
+            UPDATE SET model_name = source.model_name,
+                       model_onnx = source.model_onnx,
+                       hyperparameters = source.hyperparameters,
+                       created_at = SYSUTCDATETIME()
         WHEN NOT MATCHED THEN
             INSERT (run_id, fold_number, model_name, model_onnx, hyperparameters)
             VALUES (source.run_id, source.fold_number, source.model_name, source.model_onnx, source.hyperparameters);
