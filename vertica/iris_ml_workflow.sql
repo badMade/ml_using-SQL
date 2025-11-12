@@ -21,9 +21,10 @@ CREATE TABLE iris_raw (
     species      VARCHAR(32)
 );
 
--- Update the path to point to a shared IRIS CSV accessible to Vertica nodes.
+-- Load from a centralized S3 location for better portability across deployments.
+-- Replace with your S3 bucket path and configure S3 credentials as needed.
 COPY iris_raw
-    FROM '/data/iris/iris.csv'
+    FROM 's3://redshift-downloads/iris/iris.csv'
     PARSER FCSVPARSER()
     SKIP 1
     DELIMITER ',';
@@ -128,16 +129,10 @@ BEGIN
 
         EXECUTE 'INSERT INTO iris_metrics (platform, run_id, model_name, fold_number, metric_name, metric_value, hyperparameters)
                  SELECT ''vertica'', ''' || run_id || ''', ''' || model_name || ''', ' || fold || ', metric_name, metric_value, ''' || hyper_json || '''
-                 FROM (
-                     SELECT ''accuracy'' AS metric_name, AVG(CASE WHEN predicted_label = actual_label THEN 1 ELSE 0 END)::FLOAT AS metric_value
-                     FROM iris_predictions_holdout
-                     UNION ALL
-                     SELECT metric_name, metric_value
-                     FROM COMPUTE_CLASSIFICATION_METRICS(
-                         ON (SELECT actual_label, predicted_label, predicted_prob FROM iris_predictions_holdout)
-                         USING observed_column = ''actual_label'', predicted_column = ''predicted_label'', probability_column = ''predicted_prob''
-                     )
-                 ) metrics;';
+                 FROM COMPUTE_CLASSIFICATION_METRICS(
+                     ON (SELECT actual_label, predicted_label, predicted_prob FROM iris_predictions_holdout)
+                     USING observed_column = ''actual_label'', predicted_column = ''predicted_label'', probability_column = ''predicted_prob''
+                 );';
 
         fold := fold + 1;
     END LOOP;

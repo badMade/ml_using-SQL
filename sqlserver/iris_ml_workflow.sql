@@ -30,15 +30,32 @@ CREATE TABLE analytics.iris_raw (
 );
 GO
 
--- Load the IRIS CSV from a shared location. Update the data source as needed.
-BULK INSERT analytics.iris_raw
-FROM 'C:\\data\\iris.csv' -- Update path to match the shared location accessible to SQL Server
-WITH (
+-- Load the IRIS CSV from a configured data source.
+-- For production deployments, use one of the following approaches:
+--   * Azure Blob Storage: Configure an EXTERNAL DATA SOURCE and use BULK INSERT
+--     or OPENROWSET with a URL like:
+--     'https://<account>.blob.core.windows.net/<container>/iris.csv'
+--   * Network share accessible to the SQL Server service account:
+--     '\\\\server\\share\\iris.csv'
+--   * HTTP/HTTPS endpoint with appropriate authentication
+--
+-- The example below uses a public HTTPS endpoint. Replace with your actual data
+-- source. See: https://docs.microsoft.com/sql/t-sql/statements/bulk-insert-transact-sql
+
+-- Using OPENROWSET for flexibility with HTTPS sources
+INSERT INTO analytics.iris_raw (sepal_length, sepal_width, petal_length, petal_width, species)
+SELECT 
+    CAST([sepal_length] AS FLOAT),
+    CAST([sepal_width] AS FLOAT),
+    CAST([petal_length] AS FLOAT),
+    CAST([petal_width] AS FLOAT),
+    CAST([species] AS NVARCHAR(32))
+FROM OPENROWSET(
+    BULK N'https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv',
     FORMAT = 'CSV',
     FIRSTROW = 2,
-    FIELDTERMINATOR = ',',
-    ROWTERMINATOR = '0x0a'
-);
+    FORMATFILE_DATA_SOURCE = NULL
+) AS iris_data([sepal_length], [sepal_width], [petal_length], [petal_width], [species]);
 GO
 
 IF OBJECT_ID(N'analytics.iris_folds', N'U') IS NOT NULL
@@ -163,6 +180,9 @@ from sklearn.linear_model import LogisticRegression
 from skl2onnx import convert_sklearn
 from skl2onnx.common.data_types import FloatTensorType, StringTensorType
 
+# Parse hyperparameters from JSON
+hyperparams = json.loads(hyperparameters_json)
+
 X = InputDataSet[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
 y = InputDataSet["species"]
 model = LogisticRegression(max_iter=200, solver="lbfgs", multi_class="auto")
@@ -172,7 +192,9 @@ onnx_model = convert_sklearn(model, initial_types=initial_type, target_opset=12)
 OutputDataSet = pd.DataFrame({"model_onnx": [onnx_model.SerializeToString()]})
 ',
             @input_data_1 = N'SELECT sepal_length, sepal_width, petal_length, petal_width, species FROM #iris_train',
-            @output_data_1_name = N'OutputDataSet';
+            @output_data_1_name = N'OutputDataSet',
+            @params = N'@hyperparameters_json NVARCHAR(4000)',
+            @hyperparameters_json = @hyperparameters;
 
         MERGE analytics.iris_models AS target
         USING (SELECT @run_id AS run_id, @fold AS fold_number, @model_name AS model_name, model_onnx, @hyperparameters AS hyperparameters FROM @model) AS source
@@ -229,50 +251,53 @@ OutputDataSet = pd.DataFrame({"model_onnx": [onnx_model.SerializeToString()]})
             actual_label
         FROM #scored;
 
-        WITH class_metrics AS (
-            SELECT
-                c.class_label,
-                SUM(CASE WHEN s.actual_label = c.class_label AND s.predicted_label = c.class_label THEN 1 ELSE 0 END) AS tp,
-                SUM(CASE WHEN s.actual_label <> c.class_label AND s.predicted_label = c.class_label THEN 1 ELSE 0 END) AS fp,
-                SUM(CASE WHEN s.actual_label = c.class_label AND s.predicted_label <> c.class_label THEN 1 ELSE 0 END) AS fn
-            FROM (VALUES (N'setosa'), (N'versicolor'), (N'virginica')) AS c(class_label)
-            LEFT JOIN #scored AS s ON 1 = 1
-            GROUP BY c.class_label
-        ),
-        aggregated AS (
-            SELECT
-                AVG(CASE WHEN tp + fp = 0 THEN 0 ELSE CAST(tp AS FLOAT) / (tp + fp) END) AS precision_macro,
-                AVG(CASE WHEN tp + fn = 0 THEN 0 ELSE CAST(tp AS FLOAT) / (tp + fn) END) AS recall_macro,
-                AVG(CASE WHEN (2 * tp + fp + fn) = 0 THEN 0 ELSE (2.0 * tp) / (2 * tp + fp + fn) END) AS f1_macro
-            FROM class_metrics
-        ),
-        accuracy_metric AS (
-            SELECT AVG(CASE WHEN predicted_label = actual_label THEN 1.0 ELSE 0.0 END) AS accuracy
-            FROM #scored
-        ),
-        logloss_metric AS (
-            SELECT AVG(
-                CASE actual_label
-                    WHEN N'setosa' THEN -LOG(NULLIF(probability_setosa, 0))
-                    WHEN N'versicolor' THEN -LOG(NULLIF(probability_versicolor, 0))
-                    WHEN N'virginica' THEN -LOG(NULLIF(probability_virginica, 0))
-                END
-            ) AS log_loss
-            FROM #scored
-        )
+        -- Calculate classification metrics using Python and scikit-learn
+        DECLARE @metrics TABLE (metric_name NVARCHAR(64), metric_value FLOAT);
+
+        INSERT INTO @metrics (metric_name, metric_value)
+        EXEC sp_execute_external_script
+            @language = N'Python',
+            @script = N'
+import pandas as pd
+import numpy as np
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, log_loss
+
+# Extract actual and predicted labels
+y_true = InputDataSet["actual_label"].values
+y_pred = InputDataSet["predicted_label"].values
+
+# Extract probability columns for log-loss calculation
+prob_cols = ["probability_setosa", "probability_versicolor", "probability_virginica"]
+y_prob = InputDataSet[prob_cols].values
+
+# Define label order for probability alignment
+labels = ["setosa", "versicolor", "virginica"]
+
+# Calculate metrics
+accuracy = accuracy_score(y_true, y_pred)
+precision = precision_score(y_true, y_pred, labels=labels, average="macro", zero_division=0)
+recall = recall_score(y_true, y_pred, labels=labels, average="macro", zero_division=0)
+f1 = f1_score(y_true, y_pred, labels=labels, average="macro", zero_division=0)
+logloss = log_loss(y_true, y_prob, labels=labels)
+
+# Create output dataframe with metrics
+metrics_data = [
+    ("accuracy", accuracy),
+    ("precision", precision),
+    ("recall", recall),
+    ("f1", f1),
+    ("log_loss", logloss)
+]
+
+OutputDataSet = pd.DataFrame(metrics_data, columns=["metric_name", "metric_value"])
+',
+            @input_data_1 = N'SELECT actual_label, predicted_label, probability_setosa, probability_versicolor, probability_virginica FROM #scored',
+            @output_data_1_name = N'OutputDataSet';
+
+        -- Insert metrics with metadata
         INSERT INTO analytics.iris_metrics (platform, run_id, model_name, fold_number, metric_name, metric_value, hyperparameters)
         SELECT N'sqlserver', @run_id, @model_name, @fold, metric_name, metric_value, @hyperparameters
-        FROM (
-            SELECT N'accuracy' AS metric_name, accuracy AS metric_value FROM accuracy_metric
-            UNION ALL
-            SELECT N'precision' AS metric_name, precision_macro FROM aggregated
-            UNION ALL
-            SELECT N'recall'    AS metric_name, recall_macro FROM aggregated
-            UNION ALL
-            SELECT N'f1'        AS metric_name, f1_macro FROM aggregated
-            UNION ALL
-            SELECT N'log_loss'  AS metric_name, log_loss FROM logloss_metric
-        ) AS metrics;
+        FROM @metrics;
 
         SET @fold += 1;
     END;

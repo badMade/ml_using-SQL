@@ -62,7 +62,10 @@ CREATE TABLE IF NOT EXISTS `iris_ml.iris_predictions` (
 DECLARE k INT64 DEFAULT 5;
 DECLARE fold INT64 DEFAULT 1;
 DECLARE run_id STRING DEFAULT FORMAT_TIMESTAMP('%Y%m%d%H%M%S', CURRENT_TIMESTAMP());
-DECLARE hyperparameters STRING DEFAULT '{"model_type":"logistic_reg","max_iterations":50,"l2_reg":0.1}';
+DECLARE model_type STRING DEFAULT 'logistic_reg';
+DECLARE max_iterations INT64 DEFAULT 50;
+DECLARE l2_reg FLOAT64 DEFAULT 0.1;
+DECLARE hyperparameters STRING DEFAULT FORMAT('{"model_type":"%s","max_iterations":%d,"l2_reg":%f}', model_type, max_iterations, l2_reg);
 DECLARE model_name STRING;
 DECLARE eval_sql STRING;
 DECLARE predict_sql STRING;
@@ -75,12 +78,15 @@ WHILE fold <= k DO
 
   EXECUTE IMMEDIATE FORMAT(
     '''CREATE OR REPLACE MODEL `iris_ml.%s`
-        OPTIONS (model_type = ''logistic_reg'', input_label_cols = [''species''], max_iterations = 50, l2_reg = 0.1)
+        OPTIONS (model_type = ''%s'', input_label_cols = [''species''], max_iterations = %d, l2_reg = %f)
       AS
       SELECT sepal_length, sepal_width, petal_length, petal_width, species
       FROM `iris_ml.iris_folds`
       WHERE fold_id <> %d''',
     model_name,
+    model_type,
+    max_iterations,
+    l2_reg,
     fold
   );
 
@@ -112,40 +118,28 @@ WHILE fold <= k DO
   EXECUTE IMMEDIATE eval_sql USING run_id AS run_id, hyperparameters AS hyperparameters;
 
   SET predict_sql = FORMAT(
-    '''INSERT INTO `iris_ml.iris_predictions`
+    '''INSERT INTO `iris_ml.iris_predictions` (
+          run_id, model_name, fold_number, sepal_length, sepal_width, petal_length, petal_width, 
+          predicted_label, predicted_prob, actual_label, created_at
+        )
          SELECT
            @run_id,
            ''%s'',
            %d,
-           feature.sepal_length,
-           feature.sepal_width,
-           feature.petal_length,
-           feature.petal_width,
-           prediction.predicted_label,
-           (SELECT prob
-              FROM UNNEST(prediction.predicted_label_probs)
-             WHERE label = prediction.predicted_label
-             LIMIT 1) AS predicted_prob,
-           actual.species AS actual_label,
+           p.sepal_length,
+           p.sepal_width,
+           p.petal_length,
+           p.petal_width,
+           p.predicted_label,
+           (SELECT prob FROM UNNEST(p.predicted_label_probs) WHERE label = p.predicted_label LIMIT 1) AS predicted_prob,
+           p.species AS actual_label,
            CURRENT_TIMESTAMP()
-         FROM (
-           SELECT sepal_length, sepal_width, petal_length, petal_width
-           FROM `iris_ml.iris_folds`
-           WHERE fold_id = %d
-         ) AS feature
-         JOIN ML.PREDICT(MODEL `iris_ml.%s`, feature) AS prediction
-           ON feature.sepal_length = prediction.sepal_length
-          AND feature.sepal_width  = prediction.sepal_width
-          AND feature.petal_length = prediction.petal_length
-          AND feature.petal_width  = prediction.petal_width
-         JOIN `iris_ml.iris_folds` AS actual
-           ON actual.sepal_length = feature.sepal_length
-          AND actual.sepal_width  = feature.sepal_width
-          AND actual.petal_length = feature.petal_length
-          AND actual.petal_width  = feature.petal_width
-          AND actual.fold_id      = %d''',
+         FROM ML.PREDICT(MODEL `iris_ml.%s`, (
+             SELECT sepal_length, sepal_width, petal_length, petal_width, species
+             FROM `iris_ml.iris_folds`
+             WHERE fold_id = %d
+         )) AS p''',
     model_name,
-    fold,
     fold,
     model_name,
     fold
