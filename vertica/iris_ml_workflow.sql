@@ -81,11 +81,22 @@ DECLARE
     fold INT := 1;
     run_id VARCHAR(64);
     model_name VARCHAR(128);
-    hyper_json VARCHAR(4000) := '{"algorithm":"logistic_regression","max_iterations":100,"regularization":"l2","lambda":0.1}';
+    -- Hyperparameter variables (single source of truth)
+    hp_algorithm VARCHAR(64) := 'logistic_regression';
+    hp_regularization VARCHAR(16) := 'l2';
+    hp_lambda FLOAT := 0.1;
+    hp_max_iterations INT := 100;
+    hyper_json VARCHAR(4000);
 BEGIN
     IF k < 2 THEN
         RAISE EXCEPTION 'k-fold must be at least 2';
     END IF;
+
+    -- Construct JSON from hyperparameter variables
+    hyper_json := '{"algorithm":"' || hp_algorithm || '",' ||
+                  '"max_iterations":' || hp_max_iterations || ',' ||
+                  '"regularization":"' || hp_regularization || '",' ||
+                  '"lambda":' || hp_lambda || '}';
 
     run_id := TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDDHH24MISS') || LPAD(FLOOR(RANDOM() * 1000)::VARCHAR, 3, '0');
     INSERT INTO iris_run_registry(run_id, model_family, notes)
@@ -98,7 +109,7 @@ BEGIN
 
         EXECUTE 'CREATE MODEL ' || model_name || '
             USING LogisticRegression
-            WITH PARAMETERS (regularization = ''l2'', lambda = 0.1, max_iterations = 100)
+            WITH PARAMETERS (regularization = ''' || hp_regularization || ''', lambda = ' || hp_lambda || ', max_iterations = ' || hp_max_iterations || ')
             AS
             SELECT species, sepal_length, sepal_width, petal_length, petal_width
             FROM iris_folds
