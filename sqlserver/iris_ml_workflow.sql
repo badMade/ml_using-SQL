@@ -190,21 +190,21 @@ BEGIN
         EXEC sp_execute_external_script
             @language = N'Python',
             @script = N'
-  import json
-  import pandas as pd
-  from sklearn.linear_model import LogisticRegression
-  from skl2onnx import convert_sklearn
-  from skl2onnx.common.data_types import FloatTensorType, StringTensorType
+import json
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from skl2onnx import convert_sklearn
+from skl2onnx.common.data_types import FloatTensorType, StringTensorType
 
-  # Parse hyperparameters from JSON
-  hyperparams = json.loads(hyperparameters_json)
-  solver = hyperparams.get("solver", "lbfgs")
-  max_iter = int(hyperparams.get("max_iter", 200))
-  multi_class = hyperparams.get("multi_class", "auto")
+# Parse hyperparameters from JSON
+hyperparams = json.loads(hyperparameters_json)
+solver = hyperparams.get("solver", "lbfgs")
+max_iter = int(hyperparams.get("max_iter", 200))
+multi_class = hyperparams.get("multi_class", "auto")
 
-  X = InputDataSet[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
-  y = InputDataSet["species"]
-  model = LogisticRegression(max_iter=max_iter, solver=solver, multi_class=multi_class)
+X = InputDataSet[["sepal_length", "sepal_width", "petal_length", "petal_width"]]
+y = InputDataSet["species"]
+model = LogisticRegression(max_iter=max_iter, solver=solver, multi_class=multi_class)
 model.fit(X, y)
 initial_type = [("float_input", FloatTensorType([None, 4]))]
 onnx_model = convert_sklearn(model, initial_types=initial_type, target_opset=12)
