@@ -150,7 +150,7 @@ After creating the table, populate metrics via inserts tailored to each platform
 | `metric_name` | Human-readable metric identifier | `VARCHAR2(255)` | `VARCHAR(255)` | `STRING` | `NVARCHAR(255)` | `VARCHAR(255)` |
 | `metric_value` | Numeric scalar metric result | `NUMBER` | `DOUBLE PRECISION` | `FLOAT64` | `FLOAT` | `FLOAT` |
 | `metric_type` | Helps distinguish scalar vs structured metrics | `VARCHAR2(64)` | `VARCHAR(64)` | `STRING` | `NVARCHAR(64)` | `VARCHAR(64)` |
-| `recorded_at` | Timestamp when the metric was logged | `TIMESTAMP WITH TIME ZONE` | `TIMESTAMP` | `TIMESTAMP` | `DATETIME2(7)` | `TIMESTAMPTZ` |
+| `recorded_at` | Timestamp when the metric was logged | `TIMESTAMP WITH TIME ZONE` | `TIMESTAMPTZ` | `TIMESTAMP` | `DATETIME2(7)` | `TIMESTAMPTZ` |
 | `model_version` | Version tag for model artefact | `VARCHAR2(128)` | `VARCHAR(128)` | `STRING` | `NVARCHAR(128)` | `VARCHAR(128)` |
 | `environment_label` | Deployment environment tag | `VARCHAR2(64)` | `VARCHAR(64)` | `STRING` | `NVARCHAR(64)` | `VARCHAR(64)` |
 | `tags` | Semi-structured labels or arrays | `CLOB` | `SUPER` | `ARRAY<STRING>` | `NVARCHAR(MAX)` | `ARRAY[VARCHAR(256)]` |
