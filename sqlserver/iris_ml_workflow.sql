@@ -13,9 +13,16 @@ Non-ANSI notes:
 */
 
 -- 1. Schema and source table setup ---------------------------------------------------
-IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = N'analytics')
-    EXEC('CREATE SCHEMA analytics');
-GO
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM all_users WHERE username = 'ANALYTICS';
+    IF v_count = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE USER analytics IDENTIFIED BY analytics_password';
+        EXECUTE IMMEDIATE 'GRANT CREATE SESSION TO analytics';
+    END IF;
+END;
+/
 
 IF OBJECT_ID(N'analytics.iris_raw', N'U') IS NOT NULL
     DROP TABLE analytics.iris_raw;
