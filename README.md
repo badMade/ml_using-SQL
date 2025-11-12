@@ -108,14 +108,14 @@ After creating the table, populate metrics via inserts tailored to each platform
   ```
 - **Redshift**
   ```sql
-  INSERT INTO ml_metrics VALUES (
+  INSERT INTO ml_metrics (pipeline_id, run_id, metric_name, metric_value, metric_type, recorded_at, model_version, environment_label, tags, metadata_json) VALUES (
       'reco-pipeline', '2024-05-01T00:00Z', 'hit_rate', 0.771, 'scalar',
       CURRENT_TIMESTAMP, 'v12', 'staging', ARRAY['rank-10'], '{"top_k": 10}'
   );
   ```
 - **BigQuery**
   ```sql
-  INSERT INTO `my-project.ml_observability.ml_metrics`
+  INSERT INTO `my-project.ml_observability.ml_metrics` (pipeline_id, run_id, metric_name, metric_value, metric_type, recorded_at, model_version, environment_label, tags, metadata_json)
   VALUES (
       'fraud-detection', '2024-05-01T00:00Z', 'precision', 0.913, 'scalar',
       CURRENT_TIMESTAMP(), 'v9', 'production', ['financial'], JSON '{"threshold": 0.75}'
