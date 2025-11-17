@@ -40,6 +40,7 @@ GO
 -- See https://learn.microsoft.com/sql/t-sql/functions/openrowset-transact-sql
 -- for supported options.
 
+-- IMPORTANT: Update this path to point to your local iris.csv file.
 :setvar IrisCsvPath "C:\\path\\to\\iris.csv"
 
 -- Using OPENROWSET with a configurable source path
