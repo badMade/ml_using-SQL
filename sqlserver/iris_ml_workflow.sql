@@ -30,31 +30,30 @@ CREATE TABLE analytics.iris_raw (
 );
 GO
 
--- Load the IRIS CSV from a configured data source.
--- For production deployments, use one of the following approaches:
---   * Azure Blob Storage: Configure an EXTERNAL DATA SOURCE and use BULK INSERT
---     or OPENROWSET with a URL like:
---     'https://<account>.blob.core.windows.net/<container>/iris.csv'
---   * Network share accessible to the SQL Server service account:
---     '\\\\server\\share\\iris.csv'
---   * HTTP/HTTPS endpoint with appropriate authentication
---
--- The example below uses a public HTTPS endpoint. Replace with your actual data
--- source. See: https://docs.microsoft.com/sql/t-sql/statements/bulk-insert-transact-sql
+-- Provide the data file path as a SQLCMD variable so the script can run in
+-- different environments without editing the T-SQL itself. Examples:
+--   Windows local path:      :setvar IrisCsvPath "C:\\data\\iris.csv"
+--   Linux path:              :setvar IrisCsvPath "/var/opt/sqlserver/data/iris.csv"
+--   External data source:    Create EXTERNAL DATA SOURCE IrisExternal WITH (...)
+--                            then set :setvar IrisCsvPath "iris.csv" and
+--                            specify DATA_SOURCE = 'IrisExternal' below.
+-- See https://learn.microsoft.com/sql/t-sql/functions/openrowset-transact-sql
+-- for supported options.
 
--- Using OPENROWSET for flexibility with HTTPS sources
+:setvar IrisCsvPath "C:\\path\\to\\iris.csv"
+
+-- Using OPENROWSET with a configurable source path
 INSERT INTO analytics.iris_raw (sepal_length, sepal_width, petal_length, petal_width, species)
-SELECT 
+SELECT
     CAST([sepal_length] AS FLOAT),
     CAST([sepal_width] AS FLOAT),
     CAST([petal_length] AS FLOAT),
     CAST([petal_width] AS FLOAT),
     CAST([species] AS NVARCHAR(32))
 FROM OPENROWSET(
-    BULK N'https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv',
+    BULK N'$(IrisCsvPath)',
     FORMAT = 'CSV',
-    FIRSTROW = 2,
-    FORMATFILE_DATA_SOURCE = NULL
+    FIRSTROW = 2
 ) AS iris_data([sepal_length], [sepal_width], [petal_length], [petal_width], [species]);
 GO
 
