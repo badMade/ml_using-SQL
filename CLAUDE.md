@@ -8,9 +8,13 @@ Machine Learning Metrics SQL Toolkit - provides vendor-specific SQL scripts for 
 
 ## Linting Commands
 
-**SQL** (using sqlfluff):
+**SQL** (using sqlfluff with per-dialect linting):
 ```bash
-sqlfluff lint sql/
+sqlfluff lint sql/oracle/ --dialect oracle
+sqlfluff lint sql/bigquery/ --dialect bigquery
+sqlfluff lint sql/redshift/ --dialect redshift
+sqlfluff lint sql/sqlserver/ --dialect tsql
+sqlfluff lint sql/vertica/ --dialect postgres
 ```
 
 ## Architecture

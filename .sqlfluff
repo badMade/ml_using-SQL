@@ -1,0 +1,70 @@
+# SQLFluff configuration for ML Metrics SQL Toolkit
+# Each platform uses a different SQL dialect - run per-directory or use dialect overrides
+
+[sqlfluff]
+# Default dialect - use ANSI as baseline
+dialect = ansi
+# Templater for BigQuery variables like ${project_id}
+templater = raw
+# Ignore parsing errors for vendor-specific extensions
+large_file_skip_byte_limit = 0
+
+# Indentation rules
+[sqlfluff:indentation]
+indent_unit = space
+tab_space_size = 4
+indented_joins = false
+indented_using_on = true
+
+# Layout rules
+[sqlfluff:layout:type:comma]
+line_position = trailing
+
+# Rule configurations
+[sqlfluff:rules]
+# Consistent capitalization for keywords
+capitalisation_policy = upper
+extended_capitalisation_policy = upper
+
+# Allow long lines for readability in complex queries
+[sqlfluff:rules:layout.long_lines]
+max_line_length = 120
+ignore_comment_lines = true
+
+# Aliasing preferences
+[sqlfluff:rules:aliasing.table]
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.column]
+aliasing = explicit
+
+# Convention rules
+[sqlfluff:rules:convention.terminator]
+multiline_newline = true
+require_final_semicolon = true
+
+# Ambiguous rules - be lenient for cross-platform compatibility
+[sqlfluff:rules:ambiguous.column_references]
+group_by_and_order_by_style = consistent
+
+# Platform-specific dialect overrides
+# Run sqlfluff with --dialect flag for specific platforms:
+#   sqlfluff lint sql/oracle/ --dialect oracle
+#   sqlfluff lint sql/bigquery/ --dialect bigquery
+#   sqlfluff lint sql/redshift/ --dialect redshift
+#   sqlfluff lint sql/sqlserver/ --dialect tsql
+#   sqlfluff lint sql/vertica/ --dialect postgres
+#   sqlfluff lint oracle/ --dialect oracle
+#   sqlfluff lint bigquery/ --dialect bigquery
+#   sqlfluff lint redshift/ --dialect redshift
+#   sqlfluff lint sqlserver/ --dialect tsql
+#   sqlfluff lint vertica/ --dialect postgres
+
+# Exclude vendor-specific constructs that may not parse in ANSI mode
+[sqlfluff:rules:structure.unused_cte]
+enabled = false
+
+# Disable rules that conflict with ML-specific patterns
+[sqlfluff:rules:aliasing.forbid]
+# ML workflows often use * for SELECT
+force_enable = false
