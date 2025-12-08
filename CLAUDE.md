@@ -11,6 +11,7 @@ Machine Learning Metrics SQL Toolkit - provides vendor-specific SQL scripts for 
 **SQL** (using sqlfluff):
 ```bash
 sqlfluff lint sql/
+```
 
 ## Architecture
 
