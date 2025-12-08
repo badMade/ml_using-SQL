@@ -8,15 +8,9 @@ Machine Learning Metrics SQL Toolkit - provides vendor-specific SQL scripts for 
 
 ## Linting Commands
 
-**Python** (supports 3.8, 3.9, 3.10):
+**SQL** (using sqlfluff):
 ```bash
-pylint $(git ls-files '*.py')
-```
-
-**JavaScript/TypeScript**:
-```bash
-npx eslint . --config .eslintrc.js --ext .js,.jsx,.ts,.tsx
-```
+sqlfluff lint sql/
 
 ## Architecture
 
