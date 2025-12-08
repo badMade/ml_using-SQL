@@ -386,6 +386,7 @@ BEGIN
         v_train_table := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_TRAIN_F' || fold_rec.fold_id);
         v_test_table  := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_TEST_F' || fold_rec.fold_id);
 
+        -- Safe: v_train_table validated via DBMS_ASSERT.SIMPLE_SQL_NAME
         BEGIN
             EXECUTE IMMEDIATE 'DROP TABLE ' || v_train_table;
         EXCEPTION
@@ -395,6 +396,7 @@ BEGIN
                 END IF;
         END;
 
+        -- Safe: v_test_table validated via DBMS_ASSERT.SIMPLE_SQL_NAME
         BEGIN
             EXECUTE IMMEDIATE 'DROP TABLE ' || v_test_table;
         EXCEPTION
@@ -404,11 +406,13 @@ BEGIN
                 END IF;
         END;
 
+        -- Safe: v_train_table validated via DBMS_ASSERT.SIMPLE_SQL_NAME, fold_id is NUMBER from cursor
         EXECUTE IMMEDIATE 'CREATE TABLE ' || v_train_table || ' AS
-            SELECT * FROM iris_folds WHERE fold_id <> ' || fold_rec.fold_id;
+            SELECT * FROM iris_folds WHERE fold_id <> :fold_id' USING fold_rec.fold_id;
 
+        -- Safe: v_test_table validated via DBMS_ASSERT.SIMPLE_SQL_NAME, fold_id is NUMBER from cursor
         EXECUTE IMMEDIATE 'CREATE TABLE ' || v_test_table || ' AS
-            SELECT * FROM iris_folds WHERE fold_id = ' || fold_rec.fold_id;
+            SELECT * FROM iris_folds WHERE fold_id = :fold_id' USING fold_rec.fold_id;
 
         FOR param_rec IN (
             SELECT ps.parameter_set_id,
@@ -467,6 +471,7 @@ BEGIN
             -- PROBABILITY_<TARGET_VALUE> with hyphens converted to underscores.
             v_probability_column := 'PROBABILITY_' || REPLACE(UPPER(c_positive_target), '-', '_');
 
+            -- Safe: v_apply_table validated via DBMS_ASSERT.SIMPLE_SQL_NAME
             BEGIN
                 EXECUTE IMMEDIATE 'DROP TABLE ' || v_apply_table;
             EXCEPTION
@@ -493,11 +498,13 @@ BEGIN
             );
 
             -- Guard: check if test set has both positive and negative examples for ROC/Lift
+            -- Safe: v_test_table validated via DBMS_ASSERT.SIMPLE_SQL_NAME, c_positive_target bound as parameter
             EXECUTE IMMEDIATE
-                'SELECT NVL(MAX(CASE WHEN species = ''' || c_positive_target || ''' THEN 1 ELSE 0 END), 0),
-                        NVL(MAX(CASE WHEN species <> ''' || c_positive_target || ''' THEN 1 ELSE 0 END), 0)
+                'SELECT NVL(MAX(CASE WHEN species = :target THEN 1 ELSE 0 END), 0),
+                        NVL(MAX(CASE WHEN species <> :target THEN 1 ELSE 0 END), 0)
                    FROM ' || v_test_table
-                INTO v_has_positive, v_has_negative;
+                INTO v_has_positive, v_has_negative
+                USING c_positive_target, c_positive_target;
 
             -- Only compute ROC if test set has both positive and negative examples
             IF v_has_positive > 0 AND v_has_negative > 0 THEN
@@ -514,10 +521,11 @@ BEGIN
                 v_roc_auc := NULL;  -- Set to NULL when ROC cannot be computed
             END IF;
 
-            v_lift_table := 'IRIS_LIFT_' || v_model_id;
+            v_lift_table := DBMS_ASSERT.SIMPLE_SQL_NAME('IRIS_LIFT_' || v_model_id);
             
             -- Only compute Lift if test set has both positive and negative examples
             IF v_has_positive > 0 AND v_has_negative > 0 THEN
+                -- Safe: v_lift_table validated via DBMS_ASSERT.SIMPLE_SQL_NAME
                 BEGIN
                     EXECUTE IMMEDIATE 'DROP TABLE ' || v_lift_table;
                 EXCEPTION
@@ -583,6 +591,7 @@ BEGIN
               FROM aggregates;
 
             -- Only extract lift value if it was computed
+            -- Safe: v_lift_table validated via DBMS_ASSERT.SIMPLE_SQL_NAME
             IF v_has_positive > 0 AND v_has_negative > 0 THEN
                 EXECUTE IMMEDIATE
                     'SELECT lift_value FROM (

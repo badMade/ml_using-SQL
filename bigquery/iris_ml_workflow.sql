@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS `iris_ml.iris_predictions` (
 );
 
 -- 3. K-fold training script --------------------------------------------------------
+-- Security: All dynamic SQL uses FORMAT() with controlled local variables (not user input).
+-- String parameters (run_id, hyperparameters) are bound via USING clause to prevent injection.
+-- Model names use backtick-quoted identifiers for safe identifier handling.
 DECLARE k INT64 DEFAULT 5;
 DECLARE fold INT64 DEFAULT 1;
 DECLARE run_id STRING DEFAULT FORMAT_TIMESTAMP('%Y%m%d%H%M%S', CURRENT_TIMESTAMP());
