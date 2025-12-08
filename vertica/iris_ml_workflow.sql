@@ -74,6 +74,8 @@ CREATE TABLE IF NOT EXISTS iris_predictions (
 );
 
 -- 3. K-fold procedure --------------------------------------------------------------
+-- Security: All dynamic SQL uses USING clause for values and quote_ident() for identifiers.
+-- This prevents SQL injection by parameterizing all user-controllable inputs.
 DROP PROCEDURE IF EXISTS run_iris_kfold(INT);
 CREATE OR REPLACE PROCEDURE run_iris_kfold(k INT)
 AS $$
@@ -81,6 +83,7 @@ DECLARE
     fold INT := 1;
     run_id VARCHAR(64);
     model_name VARCHAR(128);
+    safe_model_name VARCHAR(128);
     -- Hyperparameter variables (single source of truth)
     hp_algorithm VARCHAR(64) := 'logistic_regression';
     hp_regularization VARCHAR(16) := 'l2';
@@ -103,18 +106,24 @@ BEGIN
     VALUES (run_id, 'vertica_logistic_regression', 'Automated k-fold training run via Vertica in-database ML');
 
     WHILE fold <= k LOOP
+        -- Safe: model_name derived from controlled fold INTEGER
         model_name := 'iris_lr_model_fold_' || fold;
+        safe_model_name := quote_ident(model_name);
 
-        EXECUTE 'DROP MODEL IF EXISTS ' || model_name;
+        -- Safe: Using quote_ident() for model identifier
+        EXECUTE 'DROP MODEL IF EXISTS ' || safe_model_name;
 
-        EXECUTE 'CREATE MODEL ' || model_name || '
+        -- Safe: quote_ident() for identifier, USING clause for values
+        EXECUTE 'CREATE MODEL ' || safe_model_name || '
             USING LogisticRegression
-            WITH PARAMETERS (regularization = ''' || hp_regularization || ''', lambda = ' || hp_lambda || ', max_iterations = ' || hp_max_iterations || ')
+            WITH PARAMETERS (regularization = $1, lambda = $2, max_iterations = $3)
             AS
             SELECT species, sepal_length, sepal_width, petal_length, petal_width
             FROM iris_folds
-            WHERE fold_id <> ' || fold;
+            WHERE fold_id <> $4'
+            USING hp_regularization, hp_lambda, hp_max_iterations, fold;
 
+        -- Safe: quote_ident() for model identifier, USING clause for fold value
         EXECUTE 'CREATE OR REPLACE LOCAL TEMP TABLE iris_predictions_holdout ON COMMIT PRESERVE ROWS AS
             SELECT
                 sepal_length,
@@ -122,9 +131,10 @@ BEGIN
                 petal_length,
                 petal_width,
                 species AS actual_label,
-                PREDICT(' || model_name || ' USING PARAMETERS exclude_columns = ''species'', type = ''probability'', return_details = ''true'') AS prediction
+                PREDICT(' || safe_model_name || ' USING PARAMETERS exclude_columns = ''species'', type = ''probability'', return_details = ''true'') AS prediction
             FROM iris_folds
-            WHERE fold_id = ' || fold || ';';
+            WHERE fold_id = $1'
+            USING fold;
 
         EXECUTE 'ALTER TABLE iris_predictions_holdout ADD COLUMN predicted_label VARCHAR(32);';
         EXECUTE 'ALTER TABLE iris_predictions_holdout ADD COLUMN predicted_prob FLOAT;';
@@ -132,18 +142,22 @@ BEGIN
                  SET predicted_label = (prediction).predicted_value,
                      predicted_prob  = (prediction).probability;';
 
+        -- Safe: All values parameterized via USING clause
         EXECUTE 'INSERT INTO iris_predictions (run_id, model_name, fold_number, sepal_length, sepal_width, petal_length, petal_width, predicted_label, predicted_prob, actual_label)
-                 SELECT ''' || run_id || ''', ''' || model_name || ''', ' || fold || ',
+                 SELECT $1, $2, $3,
                         sepal_length, sepal_width, petal_length, petal_width,
                         predicted_label, predicted_prob, actual_label
-                 FROM iris_predictions_holdout;';
+                 FROM iris_predictions_holdout'
+                 USING run_id, model_name, fold;
 
+        -- Safe: All values parameterized via USING clause
         EXECUTE 'INSERT INTO iris_metrics (platform, run_id, model_name, fold_number, metric_name, metric_value, hyperparameters)
-                 SELECT ''vertica'', ''' || run_id || ''', ''' || model_name || ''', ' || fold || ', metric_name, metric_value, ''' || hyper_json || '''
+                 SELECT ''vertica'', $1, $2, $3, metric_name, metric_value, $4
                  FROM COMPUTE_CLASSIFICATION_METRICS(
                      ON (SELECT actual_label, predicted_label, predicted_prob FROM iris_predictions_holdout)
                      USING observed_column = ''actual_label'', predicted_column = ''predicted_label'', probability_column = ''predicted_prob''
-                 );';
+                 )'
+                 USING run_id, model_name, fold, hyper_json;
 
         fold := fold + 1;
     END LOOP;

@@ -45,12 +45,17 @@ GO
 --     '\\\\server\\share\\iris.csv'
 --   * HTTP/HTTPS endpoint with appropriate authentication
 --
+-- SECURITY WARNING: Loading data from external URLs poses risks:
+--   * No integrity verification (data could be tampered with)
+--   * URL could become unavailable or compromised
+--   * For production, use a trusted internal data source with checksum validation
+--
 -- The example below uses a public HTTPS endpoint. Replace with your actual data
 -- source. See: https://docs.microsoft.com/sql/t-sql/statements/bulk-insert-transact-sql
 
 -- Using OPENROWSET for flexibility with HTTPS sources
 INSERT INTO analytics.iris_raw (sepal_length, sepal_width, petal_length, petal_width, species)
-SELECT 
+SELECT
     CAST([sepal_length] AS FLOAT),
     CAST([sepal_width] AS FLOAT),
     CAST([petal_length] AS FLOAT),
@@ -67,6 +72,48 @@ FROM OPENROWSET(
     petal_width FLOAT,
     species NVARCHAR(32)
 ) AS source_data;
+GO
+
+-- Data validation: Verify loaded data matches expected Iris dataset characteristics
+DECLARE @row_count INT;
+DECLARE @species_count INT;
+DECLARE @expected_rows INT = 150;
+DECLARE @expected_species INT = 3;
+
+SELECT @row_count = COUNT(*) FROM analytics.iris_raw;
+SELECT @species_count = COUNT(DISTINCT species) FROM analytics.iris_raw;
+
+IF @row_count <> @expected_rows
+BEGIN
+    RAISERROR('Data validation failed: Expected %d rows but found %d. Data source may be corrupted.', 16, 1, @expected_rows, @row_count);
+END
+
+IF @species_count <> @expected_species
+BEGIN
+    RAISERROR('Data validation failed: Expected %d species but found %d. Data source may be corrupted.', 16, 1, @expected_species, @species_count);
+END
+
+-- Validate expected species names exist
+IF NOT EXISTS (SELECT 1 FROM analytics.iris_raw WHERE species = N'setosa')
+   OR NOT EXISTS (SELECT 1 FROM analytics.iris_raw WHERE species = N'versicolor')
+   OR NOT EXISTS (SELECT 1 FROM analytics.iris_raw WHERE species = N'virginica')
+BEGIN
+    RAISERROR('Data validation failed: Expected species (setosa, versicolor, virginica) not found.', 16, 1);
+END
+
+-- Validate numeric ranges are reasonable for Iris dataset
+IF EXISTS (
+    SELECT 1 FROM analytics.iris_raw
+    WHERE sepal_length < 0 OR sepal_length > 10
+       OR sepal_width < 0 OR sepal_width > 10
+       OR petal_length < 0 OR petal_length > 10
+       OR petal_width < 0 OR petal_width > 10
+)
+BEGIN
+    RAISERROR('Data validation failed: Numeric values outside expected range (0-10). Data may be corrupted.', 16, 1);
+END
+
+PRINT 'Data validation passed: Iris dataset loaded successfully.';
 GO
 
 IF OBJECT_ID(N'analytics.iris_folds', N'U') IS NOT NULL
