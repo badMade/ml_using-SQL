@@ -31,7 +31,8 @@ End-to-end ML workflow demos using Iris dataset:
 
 ## Platform-Specific Notes
 
+- **BigQuery**: Uses template variables `${project_id}` and `${dataset}`
 - **Oracle**: Lacks `IF NOT EXISTS`; may raise `ORA-00955` on reruns
 - **Redshift**: Requires SUPER data type enabled (RA3+ nodes)
-- **BigQuery**: Uses template variables `${project_id}` and `${dataset}`
+- **SQL Server**: The `create_metrics_table.sql` script is not idempotent and will fail on reruns if the table already exists.
 - **Vertica**: May need `SET set_preference('EnableComplexTypes','1')` for arrays
