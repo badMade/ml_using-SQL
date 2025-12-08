@@ -1,4 +1,3 @@
--- language: mssql
 -- SQL Server implementation mirroring the Oracle iris_ml_workflow pipeline.
 -- The workflow uses SQL Server Machine Learning Services (Python) to train an
 -- ONNX classification model, persists the artefact for scoring with the native
