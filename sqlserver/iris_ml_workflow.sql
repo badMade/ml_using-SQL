@@ -1,4 +1,4 @@
--- language: tsql
+-- language: mssql
 -- SQL Server implementation mirroring the Oracle iris_ml_workflow pipeline.
 -- The workflow uses SQL Server Machine Learning Services (Python) to train an
 -- ONNX classification model, persists the artefact for scoring with the native
@@ -16,7 +16,7 @@
 -- with proper authentication (SQL or Windows). This script assumes the 'analytics'
 -- schema already exists or will be created by a DBA.
 
-IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = N'analytics')
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = N'analytics')
 BEGIN
     EXEC('CREATE SCHEMA analytics');
 END;
