@@ -206,7 +206,7 @@ BEGIN
 
         -- Make predictions for holdout fold
         FOR rec IN
-            SELECT id, sepal_length, sepal_width, petal_length, petal_width, species
+            SELECT sepal_length, sepal_width, petal_length, petal_width, species
             FROM iris_folds
             WHERE fold_id = fold
         LOOP
