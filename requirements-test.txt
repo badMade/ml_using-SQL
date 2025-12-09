@@ -1,0 +1,4 @@
+# Test dependencies for ML Metrics SQL Toolkit
+pytest>=7.0.0
+pytest-cov>=4.0.0
+sqlfluff>=2.0.0
