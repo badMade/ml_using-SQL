@@ -166,7 +166,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- 4. K-fold procedure --------------------------------------------------------------
--- Security: Uses parameterized queries via EXECUTE...USING to prevent SQL injection.
+-- Security: Uses parameterized queries throughout to prevent SQL injection.
 DROP PROCEDURE IF EXISTS run_iris_kfold(INT, INT);
 CREATE OR REPLACE PROCEDURE run_iris_kfold(num_folds INT, k_neighbors INT DEFAULT 5)
 LANGUAGE plpgsql
