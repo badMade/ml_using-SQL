@@ -5,5 +5,9 @@
         "**/bigquery/**/*.sql": "sql",
         "**/redshift/**/*.sql": "sql",
         "**/vertica/**/*.sql": "sql"
+    },
+    "sonarlint.connectedMode.project": {
+        "connectionId": "badmade",
+        "projectKey": "badMade_ml_using-SQL"
     }
 }
